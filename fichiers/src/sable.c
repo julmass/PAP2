@@ -60,7 +60,7 @@ void sable_refresh_img()
 
 ///////////////////////////// Configurations initiales
 
-static void sable_draw_4partout(void);
+void sable_draw_4partout(void);
 
 void sable_draw (char *param)
 {
