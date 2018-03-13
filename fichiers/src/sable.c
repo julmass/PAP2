@@ -28,7 +28,7 @@ void sable_finalize()
  }
 
 
-///////////////////////////// Production d'une image 
+///////////////////////////// Production d'une image
 void sable_refresh_img()
 {
   unsigned long int max = 0;
@@ -48,7 +48,7 @@ void sable_refresh_img()
 	      r = v = b = 255 ;
 	    else if (g > 4)
 	      r = b = 255 - (240 * ((double) g) / (double) max_grains);
-	    
+
 	    cur_img (i,j) = RGB(r,v,b);
 	    if (g > max)
 	      max = g;
@@ -66,15 +66,15 @@ void sable_draw (char *param)
 {
   char func_name [1024];
   void (*f)(void) = NULL;
-  
+
   sprintf (func_name, "draw_%s", param);
   f = dlsym (DLSYM_FLAG, func_name);
-  
+
   if (f == NULL) {
     printf ("Cannot resolve draw function: %s\n", func_name);
     f = sable_draw_4partout;
   }
-  
+
   f ();
 }
 
@@ -117,29 +117,38 @@ static inline void compute_new_state (int y, int x)
       table(y+1,x)+=div4;
       table(y,x)%=4;
       changement = 1;
-    }  
+    }
 }
 
 static void traiter_tuile (int i_d, int j_d, int i_f, int j_f)
 {
   PRINT_DEBUG ('c', "tuile [%d-%d][%d-%d] traitée\n", i_d, i_f, j_d, j_f);
-  
+  //TP 4
   for (int i = i_d; i <= i_f; i++)
-    for (int j = j_d; j <= j_f; j++)
+    for (int j = j_d; j <= j_f; j++){
       compute_new_state (i, j);
+      //compute_new_state (i, j+1);
+    }
 }
 
 
 // Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
 unsigned sable_compute_seq (unsigned nb_iter)
 {
- 
+
   for (unsigned it = 1; it <= nb_iter; it ++) {
     changement = 0;
     // On traite toute l'image en un coup (oui, c'est une grosse tuile)
     traiter_tuile (1, 1, DIM - 2, DIM - 2);
-    if(changement == 0)
+
+    if(changement == 0){
+      for(int y=1; y<DIM-1; y++){
+        printf("\n");
+        for(int x=1; x<DIM-1; x++)
+          printf("%d ", table(x,y));
+      }
       return it;
+    }
   }
   return 0;
 }
@@ -152,9 +161,9 @@ static unsigned tranche = 0;
 unsigned sable_compute_tiled (unsigned nb_iter)
 {
   tranche = DIM / GRAIN;
-  
-  for (unsigned it = 1; it <= nb_iter; it ++) {
 
+  for (unsigned it = 1; it <= nb_iter; it ++) {
+    changement=0;
     // On itére sur les coordonnées des tuiles
     for (int i=0; i < GRAIN; i++)
       for (int j=0; j < GRAIN; j++)
@@ -164,8 +173,10 @@ unsigned sable_compute_tiled (unsigned nb_iter)
 			 (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
 			 (j + 1) * tranche - 1 - (j == GRAIN-1)/* j fin */);
 	}
-  }
-  
+
+  if (changement == 0)
+    return it;
+}
   return 0;
 }
 
@@ -246,7 +257,7 @@ static void compute_task (void *p, unsigned proc)
   int i, j;
 
   unpack (p, &i, &j);
-  
+
   //PRINT_DEBUG ('s', "Compute Task is running on tile (%d, %d) over cpu #%d\n", i, j, proc);
 	  traiter_tuile (i == 0 ? 1 : (i * tranche) /* i debut */,
 			 j == 0 ? 1 : (j * tranche) /* j debut */,
@@ -263,13 +274,12 @@ unsigned sable_compute_sched (unsigned nb_iter)
     for (int i = 0; i < GRAIN; i++)
       for (int j = 0; j < GRAIN; j++)
 	create_task (compute_task, i, j);
-    
+
     scheduler_task_wait ();
 
     if (changement == 0)
       return it;
   }
-  
+
   return 0;
 }
-
