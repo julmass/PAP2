@@ -127,7 +127,6 @@ static void traiter_tuile (int i_d, int j_d, int i_f, int j_f)
   for (int i = i_d; i <= i_f; i++)
     for (int j = j_d; j <= j_f; j++){
       compute_new_state (i, j);
-      //compute_new_state (i, j+1);
     }
 }
 
@@ -142,11 +141,51 @@ unsigned sable_compute_seq (unsigned nb_iter)
     traiter_tuile (1, 1, DIM - 2, DIM - 2);
 
     if(changement == 0){
-      for(int y=1; y<DIM-1; y++){
-        printf("\n");
-        for(int x=1; x<DIM-1; x++)
-          printf("%d ", table(x,y));
+      FILE* file = fopen("test1.txt", "w+");
+      for(int y=0; y<DIM-2; y++){
+        fprintf(file, "\n");
+        for(int x=0; x<DIM-2; x++)
+          fprintf(file, "%d ", table(x,y));
       }
+      fprintf(file, "\n");
+      fclose(file);
+      return it;
+    }
+  }
+  return 0;
+}
+
+
+static void traiter_tuile2 (int i_d, int j_d, int i_f, int j_f)
+{
+  PRINT_DEBUG ('c', "tuile [%d-%d][%d-%d] traitée\n", i_d, i_f, j_d, j_f);
+  //TP 4 : deroulement de boucle
+  for (int i = i_d; i <= i_f; i++)
+    for (int j = j_d; j <= j_f-1; j+=2){
+      compute_new_state (i, j);
+      compute_new_state (i, j+1);
+    }
+}
+
+
+// Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
+unsigned sable_compute_seq2 (unsigned nb_iter)
+{
+
+  for (unsigned it = 1; it <= nb_iter; it ++) {
+    changement = 0;
+    // On traite toute l'image en un coup (oui, c'est une grosse tuile)
+    traiter_tuile2 (1, 1, DIM - 2, DIM - 2);
+
+    if(changement == 0){
+      FILE* file = fopen("test2.txt", "w+");
+      for(int y=0; y<DIM-2; y++){
+        fprintf(file, "\n");
+        for(int x=0; x<DIM-2; x++)
+          fprintf(file, "%d ", table(x,y));
+      }
+      fprintf(file, "\n");
+      fclose(file);
       return it;
     }
   }
