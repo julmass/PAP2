@@ -159,12 +159,25 @@ unsigned sable_compute_seq (unsigned nb_iter)
 static void traiter_tuile2 (int i_d, int j_d, int i_f, int j_f)
 {
   PRINT_DEBUG ('c', "tuile [%d-%d][%d-%d] traitée\n", i_d, i_f, j_d, j_f);
-  //TP 4 : deroulement de boucle
-  for (int i = i_d; i <= i_f; i++)
-    for (int j = j_d; j <= j_f-1; j+=2){
+  // TP 4 : deroulement de boucle
+  for (int i = i_d; i <= i_f; i++){
+    int j;
+    // Avec 2 déroulement
+    for (j = j_d; j <= j_f; j+=2){
       compute_new_state (i, j);
       compute_new_state (i, j+1);
     }
+    // Avec 4 déroulement
+/*     for (j = j_d; j <= j_f-3; j+=4){
+      compute_new_state (i, j);
+      compute_new_state (i, j+1);
+      compute_new_state (i, j+2);
+      compute_new_state (i, j+3);
+    }
+    for(j; j<=j_f; j++)
+      compute_new_state (i, j);
+*/  
+  }
 }
 
 
