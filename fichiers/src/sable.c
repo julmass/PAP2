@@ -292,21 +292,40 @@ unsigned sable_compute_tiled (unsigned nb_iter)
   return 0;
 }
 ////////////////////////////
-unsigned sable_compute_tiled (unsigned nb_iter)
+unsigned sable_compute_omptiled (unsigned nb_iter)
 {
   tranche = DIM / GRAIN;
 
   for (unsigned it = 1; it <= nb_iter; it ++) {
     changement=0;
     // On itére sur les coordonnées des tuiles
-    for (int i=0; i < GRAIN; i++)
-      for (int j=0; j < GRAIN; j++)
-	{
-	  traiter_tuile (i == 0 ? 1 : (i * tranche) /* i debut */,
+    #pragma omp task
+    for (int i=0; i < GRAIN; i+=3)
+      for (int j=0; j < GRAIN; j++){
+	  traiter_tuile2 (i == 0 ? 1 : (i * tranche) /* i debut */,
 			 j == 0 ? 1 : (j * tranche) /* j debut */,
 			 (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
 			 (j + 1) * tranche - 1 - (j == GRAIN-1)/* j fin */);
-	}
+	    }
+    #pragma omp task
+      for (int i=0+1; i < GRAIN; i+=3)
+        for (int j=0; j < GRAIN; j++){
+  	  traiter_tuile2 (i == 0 ? 1 : (i * tranche) /* i debut */,
+  			 j == 0 ? 1 : (j * tranche) /* j debut */,
+  			 (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
+  			 (j + 1) * tranche - 1 - (j == GRAIN-1)/* j fin */);
+  	    }
+#pragma omp taskwait
+        #pragma omp task
+        for (int i=0+2; i < GRAIN; i+=3)
+          for (int j=0; j < GRAIN; j++){
+    	  traiter_tuile2 (i == 0 ? 1 : (i * tranche) /* i debut */,
+    			 j == 0 ? 1 : (j * tranche) /* j debut */,
+    			 (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
+    			 (j + 1) * tranche - 1 - (j == GRAIN-1)/* j fin */);
+    	    }
+          #pragma omp taskwait
+
 
   if (changement == 0){
     FILE* file = fopen("test_tiled.txt", "w+");
