@@ -123,7 +123,6 @@ static inline void compute_new_state (int y, int x)
 static void traiter_tuile (int i_d, int j_d, int i_f, int j_f)
 {
   PRINT_DEBUG ('c', "tuile [%d-%d][%d-%d] traitée\n", i_d, i_f, j_d, j_f);
-  //TP 4
   for (int i = i_d; i <= i_f; i++)
     for (int j = j_d; j <= j_f; j++){
       compute_new_state (i, j);
@@ -141,7 +140,7 @@ unsigned sable_compute_seq (unsigned nb_iter)
     traiter_tuile (1, 1, DIM - 2, DIM - 2);
 
     if(changement == 0){
-      FILE* file = fopen("test1.txt", "w+");
+      FILE* file = fopen("test_seq.txt", "w+");
       for(int y=0; y<DIM-2; y++){
         fprintf(file, "\n");
         for(int x=0; x<DIM-2; x++)
@@ -191,7 +190,7 @@ unsigned sable_compute_seq2 (unsigned nb_iter)
     traiter_tuile2 (1, 1, DIM - 2, DIM - 2);
 
     if(changement == 0){
-      FILE* file = fopen("test2.txt", "w+");
+      FILE* file = fopen("test_seq2.txt", "w+");
       for(int y=0; y<DIM-2; y++){
         fprintf(file, "\n");
         for(int x=0; x<DIM-2; x++)
@@ -208,11 +207,31 @@ unsigned sable_compute_seq2 (unsigned nb_iter)
 static void traiter_tuile_task (int i_d, int j_d, int i_f, int j_f)
 {
   PRINT_DEBUG ('c', "tuile [%d-%d][%d-%d] traitée\n", i_d, i_f, j_d, j_f);
-  //TP 4
-  for (int i = i_d; i <= i_f; i++)
-    for (int j = j_d; j <= j_f; j++){
-      compute_new_state (i, j);
-    }
+  // A tester avec les j pour le cache
+  #pragma omp parallel for
+  for (int i = i_d; i <= i_f; i+=3){
+      for (int j = j_d; j <= j_f; j++){
+        compute_new_state (i, j);
+      }
+  }
+  //#pragma omp taskwait
+
+  #pragma omp parallel for
+  for (int i = i_d+1; i <= i_f; i+=3){
+      for (int j = j_d; j <= j_f; j++){
+        compute_new_state (i, j);
+      }
+  }
+  //#pragma omp taskwait
+
+  #pragma omp parallel for
+  for (int i = i_d+2; i <= i_f; i+=3){
+      for (int j = j_d; j <= j_f; j++){
+        compute_new_state (i, j);
+      }
+  }
+  //#pragma omp taskwait
+
 }
 
 
@@ -227,11 +246,13 @@ unsigned sable_compute_task (unsigned nb_iter)
     for (it = 1; it <= nb_iter && changement; it ++) {
       changement = 0;
       // On traite toute l'image en un coup (oui, c'est une grosse tuile)
+
       traiter_tuile_task (1, 1, DIM - 2, DIM - 2);
+
     }
   }
       if(changement == 0){
-        FILE* file = fopen("test3.txt", "w+");
+        FILE* file = fopen("test_task.txt", "w+");
         for(int y=0; y<DIM-2; y++){
           fprintf(file, "\n");
           for(int x=0; x<DIM-2; x++)
@@ -270,7 +291,38 @@ unsigned sable_compute_tiled (unsigned nb_iter)
 }
   return 0;
 }
+////////////////////////////
+unsigned sable_compute_tiled (unsigned nb_iter)
+{
+  tranche = DIM / GRAIN;
 
+  for (unsigned it = 1; it <= nb_iter; it ++) {
+    changement=0;
+    // On itére sur les coordonnées des tuiles
+    for (int i=0; i < GRAIN; i++)
+      for (int j=0; j < GRAIN; j++)
+	{
+	  traiter_tuile (i == 0 ? 1 : (i * tranche) /* i debut */,
+			 j == 0 ? 1 : (j * tranche) /* j debut */,
+			 (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
+			 (j + 1) * tranche - 1 - (j == GRAIN-1)/* j fin */);
+	}
+
+  if (changement == 0){
+    FILE* file = fopen("test_tiled.txt", "w+");
+    for(int y=0; y<DIM-2; y++){
+      fprintf(file, "\n");
+      for(int x=0; x<DIM-2; x++)
+        fprintf(file, "%d ", table(x,y));
+    }
+    fprintf(file, "\n");
+    fclose(file);
+    return it;
+  }
+
+}
+  return 0;
+}
 
 ///////////////////////////// Version utilisant un ordonnanceur maison (sched)
 
