@@ -176,7 +176,7 @@ static void traiter_tuile2 (int i_d, int j_d, int i_f, int j_f)
     }
     for(j; j<=j_f; j++)
       compute_new_state (i, j);
-*/  
+*/
   }
 }
 
@@ -204,7 +204,46 @@ unsigned sable_compute_seq2 (unsigned nb_iter)
   }
   return 0;
 }
+/////////////////////////////
+static void traiter_tuile_task (int i_d, int j_d, int i_f, int j_f)
+{
+  PRINT_DEBUG ('c', "tuile [%d-%d][%d-%d] traitée\n", i_d, i_f, j_d, j_f);
+  //TP 4
+  for (int i = i_d; i <= i_f; i++)
+    for (int j = j_d; j <= j_f; j++){
+      compute_new_state (i, j);
+    }
+}
 
+
+// Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
+unsigned sable_compute_task (unsigned nb_iter)
+{
+  unsigned it;
+  #pragma omp parallel shared(it, changement)
+  #pragma omp single
+  {
+    changement=1;
+    for (it = 1; it <= nb_iter && changement; it ++) {
+      changement = 0;
+      // On traite toute l'image en un coup (oui, c'est une grosse tuile)
+      traiter_tuile_task (1, 1, DIM - 2, DIM - 2);
+    }
+  }
+      if(changement == 0){
+        FILE* file = fopen("test3.txt", "w+");
+        for(int y=0; y<DIM-2; y++){
+          fprintf(file, "\n");
+          for(int x=0; x<DIM-2; x++)
+            fprintf(file, "%d ", table(x,y));
+        }
+        fprintf(file, "\n");
+        fclose(file);
+        return it;
+      }
+
+  return 0;
+}
 ///////////////////////////// Version séquentielle tuilée (tiled)
 
 
