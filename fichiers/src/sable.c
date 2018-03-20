@@ -179,6 +179,17 @@ static void traiter_tuile_der4 (int i_d, int j_d, int i_f, int j_f)
       compute_new_state (i, j);
   }
 }
+#pragma GCC push_options
+#pragma GCC optimize ("unroll-all-loops")
+static void traiter_tuile_gcc (int i_d, int j_d, int i_f, int j_f)
+{
+  PRINT_DEBUG ('c', "tuile [%d-%d][%d-%d] traitée\n", i_d, i_f, j_d, j_f);
+  for (int i = i_d; i <= i_f; i++)
+    for (int j = j_d; j <= j_f; j++){
+      compute_new_state (i, j);
+    }
+}
+#pragma GCC pop_options
 
 static void traiter_tuile_omp (int i_d, int j_d, int i_f, int j_f)
 {
@@ -208,8 +219,6 @@ static void traiter_tuile_omp (int i_d, int j_d, int i_f, int j_f)
 }
 
 // Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
-#pragma GCC push_options
-#pragma GCC optimize ("unroll-all-loops")
 unsigned sable_compute_seq (unsigned nb_iter)
 {
 
@@ -234,7 +243,6 @@ unsigned sable_compute_seq (unsigned nb_iter)
   }
   return 0;
 }
-    #pragma GCC pop_options
 
 unsigned sable_compute_seq2 (unsigned nb_iter)
 {
@@ -245,14 +253,6 @@ unsigned sable_compute_seq2 (unsigned nb_iter)
     traiter_tuile_der2 (1, 1, DIM - 2, DIM - 2);
 
     if(changement == 0){
-      FILE* file = fopen("test_seq2.txt", "w+");
-      for(int y=1; y<DIM-1; y++){
-        fprintf(file, "\n");
-        for(int x=1; x<DIM-1; x++)
-          fprintf(file, "%ld ", table(x,y));
-      }
-      fprintf(file, "\n");
-      fclose(file);
       return it;
     }
   }
@@ -266,23 +266,14 @@ unsigned sable_compute_seq3 (unsigned nb_iter)
     changement = 0;
     // On traite toute l'image en un coup (oui, c'est une grosse tuile)
     traiter_tuile_der3 (1, 1, DIM - 2, DIM - 2);
+
     if(changement == 0){
-      FILE* file = fopen("test_seq3.txt", "w+");
-      for(int y=1; y<DIM-1; y++){
-        fprintf(file, "\n");
-        for(int x=1; x<DIM-1; x++)
-          fprintf(file, "%ld ", table(x,y));
-      }
-      fprintf(file, "\n");
-      fclose(file);
       return it;
     }
   }
   return 0;
 }
 
-#pragma GCC push_options
-#pragma GCC optimize ("unroll-all-loops")
 unsigned sable_compute_seq4 (unsigned nb_iter)
 {
 
@@ -290,21 +281,30 @@ unsigned sable_compute_seq4 (unsigned nb_iter)
     changement = 0;
     // On traite toute l'image en un coup (oui, c'est une grosse tuile)
     traiter_tuile_der4 (1, 1, DIM - 2, DIM - 2);
+
     if(changement == 0){
-      FILE* file = fopen("test_seq4.txt", "w+");
-      for(int y=1; y<DIM-1; y++){
-        fprintf(file, "\n");
-        for(int x=1; x<DIM-1; x++)
-          fprintf(file, "%ld ", table(x,y));
-      }
-      fprintf(file, "\n");
-      fclose(file);
       return it;
     }
   }
   return 0;
 }
-#pragma GCC pop_options
+
+unsigned sable_compute_gcc (unsigned nb_iter)
+{
+
+  for (unsigned it = 1; it <= nb_iter; it ++) {
+    changement = 0;
+    // On traite toute l'image en un coup (oui, c'est une grosse tuile)
+    traiter_tuile_gcc (1, 1, DIM - 2, DIM - 2);
+    
+    if(changement == 0){
+      return it;
+    }
+  }
+  return 0;
+}
+
+
 /////////////////////////////
 
 
