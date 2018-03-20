@@ -135,12 +135,29 @@ static void traiter_tuile_der2 (int i_d, int j_d, int i_f, int j_f)
   // TP 4 : deroulement de boucle
   for (int i = i_d; i <= i_f; i++){
     int j;
-    // Avec 2 déroulement
+    // Avec 2 déroulements
     for (j = j_d; j <= j_f-1; j+=2){
       compute_new_state (i, j);
       compute_new_state (i, j+1);
     }
-    for (j; j <= j_f; j++)
+    for (; j <= j_f; j++)
+      compute_new_state (i, j);
+  }
+}
+
+static void traiter_tuile_der3 (int i_d, int j_d, int i_f, int j_f)
+{
+  PRINT_DEBUG ('c', "tuile [%d-%d][%d-%d] traitée\n", i_d, i_f, j_d, j_f);
+  // TP 4 : deroulement de boucle
+  for (int i = i_d; i <= i_f; i++){
+    int j;
+    // Avec 3 déroulements
+    for (j = j_d; j <= j_f-2; j+=3){
+      compute_new_state (i, j);
+      compute_new_state (i, j+1);
+      compute_new_state (i, j+2);
+    }
+    for(; j<=j_f; j++)
       compute_new_state (i, j);
   }
 }
@@ -151,14 +168,14 @@ static void traiter_tuile_der4 (int i_d, int j_d, int i_f, int j_f)
   // TP 4 : deroulement de boucle
   for (int i = i_d; i <= i_f; i++){
     int j;
-    // Avec 4 déroulement
+    // Avec 4 déroulements
     for (j = j_d; j <= j_f-3; j+=4){
       compute_new_state (i, j);
       compute_new_state (i, j+1);
       compute_new_state (i, j+2);
       compute_new_state (i, j+3);
     }
-    for(j; j<=j_f; j++)
+    for(;j<=j_f; j++)
       compute_new_state (i, j);
   }
 }
@@ -166,7 +183,7 @@ static void traiter_tuile_der4 (int i_d, int j_d, int i_f, int j_f)
 static void traiter_tuile_omp (int i_d, int j_d, int i_f, int j_f)
 {
   PRINT_DEBUG ('c', "tuile [%d-%d][%d-%d] traitée\n", i_d, i_f, j_d, j_f);
-  
+
   #pragma omp parallel for
   for (int i = i_d; i <= i_f; i+=3){
       for (int j = j_d; j <= j_f; j++){
@@ -191,12 +208,15 @@ static void traiter_tuile_omp (int i_d, int j_d, int i_f, int j_f)
 }
 
 // Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
+#pragma GCC push_options
+#pragma GCC optimize ("unroll-all-loops")
 unsigned sable_compute_seq (unsigned nb_iter)
 {
 
   for (unsigned it = 1; it <= nb_iter; it ++) {
     changement = 0;
     // On traite toute l'image en un coup (oui, c'est une grosse tuile)
+
     traiter_tuile (1, 1, DIM - 2, DIM - 2);
 
     if(changement == 0){
@@ -204,15 +224,17 @@ unsigned sable_compute_seq (unsigned nb_iter)
       for(int y=1; y<DIM-1; y++){
         fprintf(file, "\n");
         for(int x=1; x<DIM-1; x++)
-          fprintf(file, "%d ", table(x,y));
+          fprintf(file, "%ld ", table(x,y));
       }
       fprintf(file, "\n");
       fclose(file);
       return it;
     }
+
   }
   return 0;
 }
+    #pragma GCC pop_options
 
 unsigned sable_compute_seq2 (unsigned nb_iter)
 {
@@ -227,7 +249,7 @@ unsigned sable_compute_seq2 (unsigned nb_iter)
       for(int y=1; y<DIM-1; y++){
         fprintf(file, "\n");
         for(int x=1; x<DIM-1; x++)
-          fprintf(file, "%d ", table(x,y));
+          fprintf(file, "%ld ", table(x,y));
       }
       fprintf(file, "\n");
       fclose(file);
@@ -237,6 +259,52 @@ unsigned sable_compute_seq2 (unsigned nb_iter)
   return 0;
 }
 
+unsigned sable_compute_seq3 (unsigned nb_iter)
+{
+
+  for (unsigned it = 1; it <= nb_iter; it ++) {
+    changement = 0;
+    // On traite toute l'image en un coup (oui, c'est une grosse tuile)
+    traiter_tuile_der3 (1, 1, DIM - 2, DIM - 2);
+    if(changement == 0){
+      FILE* file = fopen("test_seq3.txt", "w+");
+      for(int y=1; y<DIM-1; y++){
+        fprintf(file, "\n");
+        for(int x=1; x<DIM-1; x++)
+          fprintf(file, "%ld ", table(x,y));
+      }
+      fprintf(file, "\n");
+      fclose(file);
+      return it;
+    }
+  }
+  return 0;
+}
+
+#pragma GCC push_options
+#pragma GCC optimize ("unroll-all-loops")
+unsigned sable_compute_seq4 (unsigned nb_iter)
+{
+
+  for (unsigned it = 1; it <= nb_iter; it ++) {
+    changement = 0;
+    // On traite toute l'image en un coup (oui, c'est une grosse tuile)
+    traiter_tuile_der4 (1, 1, DIM - 2, DIM - 2);
+    if(changement == 0){
+      FILE* file = fopen("test_seq4.txt", "w+");
+      for(int y=1; y<DIM-1; y++){
+        fprintf(file, "\n");
+        for(int x=1; x<DIM-1; x++)
+          fprintf(file, "%ld ", table(x,y));
+      }
+      fprintf(file, "\n");
+      fclose(file);
+      return it;
+    }
+  }
+  return 0;
+}
+#pragma GCC pop_options
 /////////////////////////////
 
 
@@ -262,7 +330,7 @@ unsigned sable_compute_omp (unsigned nb_iter)
         for(int y=1; y<DIM-1; y++){
           fprintf(file, "\n");
           for(int x=1; x<DIM-1; x++)
-            fprintf(file, "%d ", table(x,y));
+            fprintf(file, "%ld ", table(x,y));
         }
         fprintf(file, "\n");
         fclose(file);
@@ -305,8 +373,8 @@ unsigned sable_compute_omptiled (unsigned nb_iter)
   for (unsigned it = 1; it <= nb_iter; it ++) {
     changement=0;
     // On itére sur les coordonnées des tuiles
-    
-    
+
+
     // #pragma omp parallel for
     // for (int i=0; i < GRAIN; i+=2)
     //   for (int j=0; j < GRAIN; j++){
@@ -346,7 +414,7 @@ unsigned sable_compute_omptiled (unsigned nb_iter)
     for(int y=1; y<DIM-1; y++){
       fprintf(file, "\n");
       for(int x=1; x<DIM-1; x++)
-        fprintf(file, "%d ", table(x,y));
+        fprintf(file, "%ld ", table(x,y));
     }
     fprintf(file, "\n");
     fclose(file);
@@ -368,8 +436,8 @@ unsigned sable_compute_tasktiled (unsigned nb_iter)
   for (it = 1; it <= nb_iter && changement; it ++) {
     changement=0;
     // On itére sur les coordonnées des tuiles
-    
-    
+
+
     //#pragma omp parallel for
     for (int i=0; i < GRAIN; i+=3)
     #pragma omp task
@@ -392,7 +460,7 @@ unsigned sable_compute_tasktiled (unsigned nb_iter)
       }
     #pragma omp taskwait
 
-    //#pragma omp parallel for  
+    //#pragma omp parallel for
     for (int i=2; i < GRAIN; i+=3)
     #pragma omp task
       for (int j=0; j < GRAIN; j++){
@@ -409,7 +477,7 @@ unsigned sable_compute_tasktiled (unsigned nb_iter)
     for(int y=1; y<DIM-1; y++){
       fprintf(file, "\n");
       for(int x=1; x<DIM-1; x++)
-        fprintf(file, "%d ", table(x,y));
+        fprintf(file, "%ld ", table(x,y));
     }
     fprintf(file, "\n");
     fclose(file);
