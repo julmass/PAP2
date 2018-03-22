@@ -104,8 +104,6 @@ void sable_draw_DIM(void){
 }
 
 
-///////////////////////////// Version séquentielle simple (seq)
-
 static inline void compute_new_state (int y, int x)
 {
   if (table(y,x) >= 4)
@@ -218,14 +216,18 @@ static void traiter_tuile_omp (int i_d, int j_d, int i_f, int j_f)
 
 }
 
+////////////////////////////////////////////////////////////////////////////////
+///////////////////////////// Version séquentielle /////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
 // Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
 unsigned sable_compute_seq (unsigned nb_iter)
 {
 
   for (unsigned it = 1; it <= nb_iter; it ++) {
     changement = 0;
-    // On traite toute l'image en un coup (oui, c'est une grosse tuile)
 
+    // On traite toute l'image en un coup (oui, c'est une grosse tuile)
     traiter_tuile (1, 1, DIM - 2, DIM - 2);
 
     if(changement == 0){
@@ -249,7 +251,7 @@ unsigned sable_compute_seq2 (unsigned nb_iter)
 
   for (unsigned it = 1; it <= nb_iter; it ++) {
     changement = 0;
-    // On traite toute l'image en un coup (oui, c'est une grosse tuile)
+
     traiter_tuile_der2 (1, 1, DIM - 2, DIM - 2);
 
     if(changement == 0){
@@ -264,7 +266,7 @@ unsigned sable_compute_seq3 (unsigned nb_iter)
 
   for (unsigned it = 1; it <= nb_iter; it ++) {
     changement = 0;
-    // On traite toute l'image en un coup (oui, c'est une grosse tuile)
+
     traiter_tuile_der3 (1, 1, DIM - 2, DIM - 2);
 
     if(changement == 0){
@@ -279,7 +281,7 @@ unsigned sable_compute_seq4 (unsigned nb_iter)
 
   for (unsigned it = 1; it <= nb_iter; it ++) {
     changement = 0;
-    // On traite toute l'image en un coup (oui, c'est une grosse tuile)
+
     traiter_tuile_der4 (1, 1, DIM - 2, DIM - 2);
 
     if(changement == 0){
@@ -294,7 +296,7 @@ unsigned sable_compute_gcc (unsigned nb_iter)
 
   for (unsigned it = 1; it <= nb_iter; it ++) {
     changement = 0;
-    // On traite toute l'image en un coup (oui, c'est une grosse tuile)
+
     traiter_tuile_gcc (1, 1, DIM - 2, DIM - 2);
     
     if(changement == 0){
@@ -304,10 +306,9 @@ unsigned sable_compute_gcc (unsigned nb_iter)
   return 0;
 }
 
-
-/////////////////////////////
-
-
+/////////////////////////////////////////////////////////////////////////////
+///////////////////////////// Version parallele /////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
 
 // Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
 unsigned sable_compute_omp (unsigned nb_iter)
@@ -339,8 +340,10 @@ unsigned sable_compute_omp (unsigned nb_iter)
 
   return 0;
 }
-///////////////////////////// Version séquentielle tuilée (tiled)
 
+///////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////// Version séquentielle tuilée (tiled) /////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////
 
 static unsigned tranche = 0;
 
@@ -365,7 +368,13 @@ unsigned sable_compute_tiled (unsigned nb_iter)
 }
   return 0;
 }
-////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////////
+//////////////////////////// Version tuilé parallele /////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
+// A tester avec colonnes (j)
+// essayer d'opti les version tiled
+//
 unsigned sable_compute_omptiled (unsigned nb_iter)
 {
   tranche = DIM / GRAIN;
@@ -374,43 +383,24 @@ unsigned sable_compute_omptiled (unsigned nb_iter)
     changement=0;
     // On itére sur les coordonnées des tuiles
 
+    // Les tuiles sont un ensemble de lignes
+    #pragma omp parallel for 
+    for (int i=0; i < GRAIN; i+=2)
+      traiter_tuile_der2 (i == 0 ? 1 : (i * tranche) /* i debut */,
+        1 /* j debut */,
+        (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
+        DIM-2/* j fin */);
+        
 
-    // #pragma omp parallel for
-    // for (int i=0; i < GRAIN; i+=2)
-    //   for (int j=0; j < GRAIN; j++){
-	  // traiter_tuile_der2 (i == 0 ? 1 : (i * tranche) /* i debut */,
-		// 	 j == 0 ? 1 : (j * tranche) /* j debut */,
-		// 	 (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
-		// 	 (j + 1) * tranche - 1 - (j == GRAIN-1)/* j fin */);
-	  //   }
-
-    // #pragma omp parallel for
-    // for (int i=1; i < GRAIN; i+=2)
-    //   for (int j=0; j < GRAIN; j++){
-    // traiter_tuile_der2 (i == 0 ? 1 : (i * tranche) /* i debut */,
-    //     j == 0 ? 1 : (j * tranche) /* j debut */,
-    //     (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
-    //     (j + 1) * tranche - 1 - (j == GRAIN-1)/* j fin */);
-    //   }
-    for (int i=0; i < GRAIN; i++){
-      #pragma omp parallel for
-      for (int j=0; j < GRAIN; j+=2){
-	  traiter_tuile_der2 (i == 0 ? 1 : (i * tranche) /* i debut */,
-			 j == 0 ? 1 : (j * tranche) /* j debut */,
-			 (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
-			 (j + 1) * tranche - 1 - (j == GRAIN-1)/* j fin */);
-	    }
-      #pragma omp parallel for
-      for (int j=1; j < GRAIN; j+=2){
-	  traiter_tuile_der2 (i == 0 ? 1 : (i * tranche) /* i debut */,
-			 j == 0 ? 1 : (j * tranche) /* j debut */,
-			 (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
-			 (j + 1) * tranche - 1 - (j == GRAIN-1)/* j fin */);
-	    }
-    }
+    #pragma omp parallel for 
+    for (int i=1; i < GRAIN; i+=2)
+      traiter_tuile_der2 (i == 0 ? 1 : (i * tranche) /* i debut */,
+          1 /* j debut */,
+          (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
+          DIM-2/* j fin */);
 
   if (changement == 0){
-    FILE* file = fopen("test_tiled.txt", "w+");
+    FILE* file = fopen("test_omptiled.txt", "w+");
     for(int y=1; y<DIM-1; y++){
       fprintf(file, "\n");
       for(int x=1; x<DIM-1; x++)
@@ -424,7 +414,7 @@ unsigned sable_compute_omptiled (unsigned nb_iter)
 }
   return 0;
 }
-/////////////////////////////
+
 unsigned sable_compute_tasktiled (unsigned nb_iter)
 {
   tranche = DIM / GRAIN;
@@ -473,7 +463,7 @@ unsigned sable_compute_tasktiled (unsigned nb_iter)
   }
 }
   if (changement == 0){
-    FILE* file = fopen("test_tiled.txt", "w+");
+    FILE* file = fopen("test_tasktiled.txt", "w+");
     for(int y=1; y<DIM-1; y++){
       fprintf(file, "\n");
       for(int x=1; x<DIM-1; x++)
