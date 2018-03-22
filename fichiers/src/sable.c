@@ -372,7 +372,6 @@ unsigned sable_compute_tiled (unsigned nb_iter)
 //////////////////////////////////////////////////////////////////////////////////
 //////////////////////////// Version tuilé parallele /////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////
-// A tester avec colonnes (j)
 // essayer d'opti les version tiled
 //
 unsigned sable_compute_omptiled (unsigned nb_iter)
@@ -399,19 +398,37 @@ unsigned sable_compute_omptiled (unsigned nb_iter)
           (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
           DIM-2/* j fin */);
 
-  if (changement == 0){
-    FILE* file = fopen("test_omptiled.txt", "w+");
-    for(int y=1; y<DIM-1; y++){
-      fprintf(file, "\n");
-      for(int x=1; x<DIM-1; x++)
-        fprintf(file, "%ld ", table(x,y));
-    }
-    fprintf(file, "\n");
-    fclose(file);
-    return it;
-  }
+  //   // Les tuiles sont un ensemble de colonnes
+  //   #pragma omp parallel for 
+  //     for (int j=0; j < GRAIN; j+=2)
+	// {
+	//   traiter_tuile_der2 (1 /* i debut */,
+	// 		 j == 0 ? 1 : (j * tranche) /* j debut */,
+	// 		 DIM-2 /* i fin */,
+	// 		 (j + 1) * tranche - 1 - (j == GRAIN-1)/* j fin */);
+	// }
+        
 
-}
+  //   #pragma omp parallel for 
+  //     for (int j=1; j < GRAIN; j+=2)
+	// {
+	//   traiter_tuile_der2 (1 /* i debut */,
+	// 		 j == 0 ? 1 : (j * tranche) /* j debut */,
+	// 		 DIM-2 /* i fin */,
+	// 		 (j + 1) * tranche - 1 - (j == GRAIN-1)/* j fin */);
+       
+    if (changement == 0){
+      FILE* file = fopen("test_omptiled.txt", "w+");
+      for(int y=1; y<DIM-1; y++){
+        fprintf(file, "\n");
+        for(int x=1; x<DIM-1; x++)
+          fprintf(file, "%ld ", table(x,y));
+      }
+      fprintf(file, "\n");
+      fclose(file);
+      return it;
+    }
+  }
   return 0;
 }
 
@@ -423,45 +440,34 @@ unsigned sable_compute_tasktiled (unsigned nb_iter)
   #pragma omp single
   {
     changement = 1;
-  for (it = 1; it <= nb_iter && changement; it ++) {
-    changement=0;
-    // On itére sur les coordonnées des tuiles
+    for (it = 1; it <= nb_iter && changement; it ++) {
+      changement=0;
+      // On itére sur les coordonnées des tuiles
 
-
-    //#pragma omp parallel for
-    for (int i=0; i < GRAIN; i+=3)
-    #pragma omp task
-      for (int j=0; j < GRAIN; j++){
-	  traiter_tuile_der2 (i == 0 ? 1 : (i * tranche) /* i debut */,
-			 j == 0 ? 1 : (j * tranche) /* j debut */,
-			 (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
-			 (j + 1) * tranche - 1 - (j == GRAIN-1)/* j fin */);
-	    }
-    #pragma omp taskwait
-
-    //#pragma omp parallel for
-    for (int i=1; i < GRAIN; i+=3)
-    #pragma omp task
-      for (int j=0; j < GRAIN; j++){
-    traiter_tuile_der2 (i == 0 ? 1 : (i * tranche) /* i debut */,
+      //#pragma omp parallel for
+      for (int i=0; i < GRAIN; i+=2)
+      #pragma omp task
+        for (int j=0; j < GRAIN; j++){
+      traiter_tuile_der2 (i == 0 ? 1 : (i * tranche) /* i debut */,
         j == 0 ? 1 : (j * tranche) /* j debut */,
         (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
         (j + 1) * tranche - 1 - (j == GRAIN-1)/* j fin */);
-      }
-    #pragma omp taskwait
+        }
+      #pragma omp taskwait
 
-    //#pragma omp parallel for
-    for (int i=2; i < GRAIN; i+=3)
-    #pragma omp task
-      for (int j=0; j < GRAIN; j++){
-    traiter_tuile_der2 (i == 0 ? 1 : (i * tranche) /* i debut */,
-        j == 0 ? 1 : (j * tranche) /* j debut */,
-        (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
-        (j + 1) * tranche - 1 - (j == GRAIN-1)/* j fin */);
-      }
-    #pragma omp taskwait
+      //#pragma omp parallel for
+      for (int i=1; i < GRAIN; i+=2)
+      #pragma omp task
+        for (int j=0; j < GRAIN; j++){
+      traiter_tuile_der2 (i == 0 ? 1 : (i * tranche) /* i debut */,
+          j == 0 ? 1 : (j * tranche) /* j debut */,
+          (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
+          (j + 1) * tranche - 1 - (j == GRAIN-1)/* j fin */);
+        }
+      #pragma omp taskwait
+
+    }
   }
-}
   if (changement == 0){
     FILE* file = fopen("test_tasktiled.txt", "w+");
     for(int y=1; y<DIM-1; y++){
