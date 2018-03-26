@@ -193,56 +193,26 @@ static void traiter_tuile_omp (int i_d, int j_d, int i_f, int j_f)
 {
   PRINT_DEBUG ('c', "tuile [%d-%d][%d-%d] traitée\n", i_d, i_f, j_d, j_f);
 
-  #pragma omp parallel for
+  #pragma omp parallel for schedule(static,4)
   for (int i = i_d; i <= i_f; i+=3){
       for (int j = j_d; j <= j_f; j++){
         compute_new_state (i, j);
       }
   }
 
-  #pragma omp parallel for
+  #pragma omp parallel for schedule(static,4)
   for (int i = i_d+1; i <= i_f; i+=3){
       for (int j = j_d; j <= j_f; j++){
         compute_new_state (i, j);
       }
   }
 
-  #pragma omp parallel for
+  #pragma omp parallel for schedule(static,4)
   for (int i = i_d+2; i <= i_f; i+=3){
       for (int j = j_d; j <= j_f; j++){
         compute_new_state (i, j);
       }
   }
-}
-
-static void traiter_tuile_task (int i_d, int j_d, int i_f, int j_f)
-{
-  PRINT_DEBUG ('c', "tuile [%d-%d][%d-%d] traitée\n", i_d, i_f, j_d, j_f);
-
-  for (int i = i_d; i <= i_f; i+=3){
-      #pragma omp task firstprivate(i)
-      for (int j = j_d; j <= j_f; j++){
-        compute_new_state (i, j);
-      }
-  }
-  #pragma omp taskwait
-
-  for (int i = i_d+1; i <= i_f; i+=3){
-      #pragma omp task firstprivate(i)
-      for (int j = j_d; j <= j_f; j++){
-        compute_new_state (i, j);
-      }
-  }
-  #pragma omp taskwait
-
-  for (int i = i_d+2; i <= i_f; i+=3){
-      #pragma omp task firstprivate(i)
-      for (int j = j_d; j <= j_f; j++){
-        compute_new_state (i, j);
-      }
-  }
-  #pragma omp taskwait
-
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -260,14 +230,14 @@ unsigned sable_compute_seq (unsigned nb_iter)
     traiter_tuile (1, 1, DIM - 2, DIM - 2);
 
     if(changement == 0){
-      FILE* file = fopen("test_seq.txt", "w+");
-      for(int y=1; y<DIM-1; y++){
-        fprintf(file, "\n");
-        for(int x=1; x<DIM-1; x++)
-          fprintf(file, "%ld ", table(x,y));
-      }
-      fprintf(file, "\n");
-      fclose(file);
+      // FILE* file = fopen("test_seq.txt", "w+");
+      // for(int y=1; y<DIM-1; y++){
+      //   fprintf(file, "\n");
+      //   for(int x=1; x<DIM-1; x++)
+      //     fprintf(file, "%ld ", table(x,y));
+      // }
+      // fprintf(file, "\n");
+      // fclose(file);
       return it;
     }
 
@@ -347,50 +317,20 @@ unsigned sable_compute_omp (unsigned nb_iter)
     traiter_tuile_omp (1, 1, DIM - 2, DIM - 2);
 
     if(changement == 0){
-      FILE* file = fopen("test_omp.txt", "w+");
-      for(int y=1; y<DIM-1; y++){
-        fprintf(file, "\n");
-        for(int x=1; x<DIM-1; x++)
-          fprintf(file, "%ld ", table(x,y));
-      }
-      fprintf(file, "\n");
-      fclose(file);
+      // FILE* file = fopen("test_omp.txt", "w+");
+      // for(int y=1; y<DIM-1; y++){
+      //   fprintf(file, "\n");
+      //   for(int x=1; x<DIM-1; x++)
+      //     fprintf(file, "%ld ", table(x,y));
+      // }
+      // fprintf(file, "\n");
+      // fclose(file);
       return it;
     }
   }
   return 0;
 }
 
-// Renvoie le nombre d'itérations effectuées avant stabilisation, ou 0
-unsigned sable_compute_task (unsigned nb_iter)
-{
-  unsigned it;
-  #pragma omp parallel shared(it, changement)
-  #pragma omp single
-  {
-    changement=1;
-    for (it = 1; it <= nb_iter && changement; it ++) {
-      changement = 0;
-      // On traite toute l'image en un coup (oui, c'est une grosse tuile)
-
-      traiter_tuile_task (1, 1, DIM - 2, DIM - 2);
-
-    }
-  }
-      if(changement == 0){
-        FILE* file = fopen("test_task.txt", "w+");
-        for(int y=1; y<DIM-1; y++){
-          fprintf(file, "\n");
-          for(int x=1; x<DIM-1; x++)
-            fprintf(file, "%ld ", table(x,y));
-        }
-        fprintf(file, "\n");
-        fclose(file);
-        return it;
-      }
-
-  return 0;
-}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////// Version séquentielle tuilée (tiled) /////////////////////////////
@@ -414,8 +354,17 @@ unsigned sable_compute_tiled (unsigned nb_iter)
 			 (j + 1) * tranche - 1 - (j == GRAIN-1)/* j fin */);
 	}
 
-  if (changement == 0)
+  if (changement == 0){
+    FILE* file = fopen("test_seq.txt", "w+");
+    for(int y=1; y<DIM-1; y++){
+      fprintf(file, "\n");
+      for(int x=1; x<DIM-1; x++)
+        fprintf(file, "%ld ", table(x,y));
+    }
+    fprintf(file, "\n");
+    fclose(file);
     return it;
+  }
 }
   return 0;
 }
@@ -472,14 +421,75 @@ unsigned sable_compute_omptiled (unsigned nb_iter)
     //   }
 
     if (changement == 0){
-      FILE* file = fopen("test_omptiled.txt", "w+");
-      for(int y=1; y<DIM-1; y++){
-        fprintf(file, "\n");
-        for(int x=1; x<DIM-1; x++)
-          fprintf(file, "%ld ", table(x,y));
-      }
-      fprintf(file, "\n");
-      fclose(file);
+      // FILE* file = fopen("test_omptiled.txt", "w+");
+      // for(int y=1; y<DIM-1; y++){
+      //   fprintf(file, "\n");
+      //   for(int x=1; x<DIM-1; x++)
+      //     fprintf(file, "%ld ", table(x,y));
+      // }
+      // fprintf(file, "\n");
+      // fclose(file);
+      return it;
+    }
+  }
+  return 0;
+}
+
+unsigned sable_compute_omp2tiled (unsigned nb_iter)
+{
+  tranche = DIM / GRAIN;
+  unsigned tranche2 = DIM /2;
+
+  for (unsigned it = 1; it <= nb_iter; it ++) {
+    changement=0;
+    // On itére sur les coordonnées des tuiles
+
+    // Les tuiles sont un ensemble de lignes
+    #pragma omp parallel for
+    for (int i=0; i < GRAIN; i+=2)
+      traiter_tuile_omp (i == 0 ? 1 : (i * tranche) /* i debut */,
+        1 /* j debut */,
+        (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
+        DIM-2/* j fin */);
+
+
+    #pragma omp parallel for
+    for (int i=1; i < GRAIN; i+=2)
+      traiter_tuile_omp (i == 0 ? 1 : (i * tranche) /* i debut */,
+          1 /* j debut */,
+          (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
+          DIM-2/* j fin */);
+
+
+    // #pragma omp parallel for
+    // for (int i=0; i < GRAIN; i+=2)
+    //   for (int j=0; j < 2; j++)
+    //   {
+    //     traiter_tuile (i == 0 ? 1 : (i * tranche) /* i debut */,
+    //       j == 0 ? 1 : (j * tranche2) /* j debut */,
+    //       (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
+    //       (j + 1) * tranche2 - 1 - (j == 2-1)/* j fin */);
+    //   }
+    //
+    // #pragma omp parallel for
+    // for (int i=1; i < GRAIN; i+=2)
+    //   for (int j=0; j < 2; j++)
+    //   {
+    //     traiter_tuile (i == 0 ? 1 : (i * tranche) /* i debut */,
+    //       j == 0 ? 1 : (j * tranche2) /* j debut */,
+    //       (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
+    //       (j + 1) * tranche2 - 1 - (j == 2-1)/* j fin */);
+    //   }
+
+    if (changement == 0){
+      // FILE* file = fopen("test_omptiled.txt", "w+");
+      // for(int y=1; y<DIM-1; y++){
+      //   fprintf(file, "\n");
+      //   for(int x=1; x<DIM-1; x++)
+      //     fprintf(file, "%ld ", table(x,y));
+      // }
+      // fprintf(file, "\n");
+      // fclose(file);
       return it;
     }
   }
@@ -519,19 +529,68 @@ unsigned sable_compute_tasktiled (unsigned nb_iter)
     }
   }
   if (changement == 0){
-    FILE* file = fopen("test_tasktiled.txt", "w+");
-    for(int y=1; y<DIM-1; y++){
-      fprintf(file, "\n");
-      for(int x=1; x<DIM-1; x++)
-        fprintf(file, "%ld ", table(x,y));
-    }
-    fprintf(file, "\n");
-    fclose(file);
+    // FILE* file = fopen("test_tasktiled.txt", "w+");
+    // for(int y=1; y<DIM-1; y++){
+    //   fprintf(file, "\n");
+    //   for(int x=1; x<DIM-1; x++)
+    //     fprintf(file, "%ld ", table(x,y));
+    // }
+    // fprintf(file, "\n");
+    // fclose(file);
     return it;
   }
 
   return 0;
 }
+
+
+unsigned sable_compute_task2tiled (unsigned nb_iter)
+{
+  tranche = DIM / GRAIN;
+  unsigned it;
+  #pragma omp parallel
+  #pragma omp single
+  {
+    changement = 1;
+    for (it = 1; it <= nb_iter && changement; it ++) {
+      changement=0;
+      // On itére sur les coordonnées des tuiles
+
+    for (int i=0; i < GRAIN; i+=2)
+      #pragma omp task
+      traiter_tuile_omp (i == 0 ? 1 : (i * tranche) /* i debut */,
+        1 /* j debut */,
+        (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
+        DIM-2 /* j fin */);
+
+    #pragma omp taskwait
+
+    for (int i=1; i < GRAIN; i+=2)
+      #pragma omp task
+      traiter_tuile_omp (i == 0 ? 1 : (i * tranche) /* i debut */,
+          1 /* j debut */,
+          (i + 1) * tranche - 1 - (i == GRAIN-1)/* i fin */,
+          DIM-2 /* j fin */);
+
+    #pragma omp taskwait
+
+    }
+  }
+  if (changement == 0){
+    // FILE* file = fopen("test_tasktiled.txt", "w+");
+    // for(int y=1; y<DIM-1; y++){
+    //   fprintf(file, "\n");
+    //   for(int x=1; x<DIM-1; x++)
+    //     fprintf(file, "%ld ", table(x,y));
+    // }
+    // fprintf(file, "\n");
+    // fclose(file);
+    return it;
+  }
+
+  return 0;
+}
+
 ///////////////////////////// Version utilisant un ordonnanceur maison (sched)
 
 unsigned P;
